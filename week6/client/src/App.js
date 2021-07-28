@@ -1,45 +1,74 @@
-import {React, useState, useEffect} from 'react';
-import './App.css';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios'
+import Manifest from './Manifest'
+import './App.css'
+import AddManifest from './AddManifest';
 
-const App = () => {
+function App() {
+
+  const [manifest, setManifest] = useState([])
   
-  const [items, setItems] = useState();
+  const getManifest = (() => {
+      axios.get("http://localhost:5000/get")
+          .then(res => setManifest(res.data))
+          .catch(err => console.log(err))
+  })
+
+  const addManifest = ((newManifest) => {
+    axios.post("http://localhost:5000/post", newManifest)
+        .then(res => {
+            setManifest(prevManifest => [...prevManifest, res.data])
+        })
+        .catch(err => console.log(err))
+  })
+
+  const deleteManifest = ((id) => {
+    axios.delete(`http://localhost:5000/delete/${id}`)
+        .then(res => {
+            setManifest(prevManifest => prevManifest.filter(manifest => manifest.id !== id ))
+        })
+        .catch(err => console.log(err))
+  })
+
+  const editManifest = ((updates, id) => {
+    axios.put(`http://localhost:5000/edit/${id}`, updates)
+        .then(res => {
+            setManifest(prevManifest => prevManifest.map (manifest => manifest.id !== id ? manifest : res.data))
+        })
+        .catch(err => console.log(err))
+  })
+
 
 useEffect(() => {
-axios.get('/getitems')
-.then(res => {
-  setItems(res.data);
-})
-.catch(err => console.log(err))
-}, [])
+      getManifest()
+  }, [])
 
-  return (
+
+return (
     <div>
-      <h1>Authentic NBA Jerseys</h1>
-      <div className="border"></div>
-      <h3>Authentic signed Jerseys</h3>
-      <div className="border"></div>
-
-        <div>
+        <h1>Luxury Air Manifest</h1>
+        
+        <AddManifest 
+            submit={addManifest}
+            buttonText="Submit"
+        />
+       <h2>Manifest List:</h2> 
+      {
+        manifest.map(manifest => 
         {
-          items ? 
-            items.map(item => 
-              <div className="box1">
-              <div className="box2" style={{background: `linear-gradient(to bottom right, rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('${item.imageURL}')`}}></div>
-                <h3>{item.title}</h3>
-                <div className="border"></div>
-                <p>{item.description}</p>
-              </div>
-
-              )
-          : 
-          <h3>Loading Jersey List...</h3>
+          return <Manifest
+            {...manifest}
+            id={manifest.id}
+            firstName={manifest.firstName}
+            lastName={manifest.lastName}
+            seatNum={manifest.seatNum}
+            checkIn={manifest.checkIn}
+            deleteManifest={deleteManifest}
+            editManifest={editManifest}
+          />}) 
         }
-        </div>
-
     </div>
-  );
+  )
 }
 
 export default App;

@@ -1,16 +1,25 @@
 const express = require('express');
-
-const mysql = require('mysql')
-
+const morgan = require('morgan');
+const app = express();
+const mysql = require('mysql');
+const bodyParser = require("body-parser");
+const cors = require('cors');
 const PORT = 5000;
 
-// Database Connection
+
+// Middleware
+app.use(express.json());
+app.use(morgan('dev'));
+app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+    // Database Connection
 const db = mysql.createConnection(
     {
         host: 'localhost',
         user: 'root',
         password: 'password',
-        database: 'nbajerseys'
+        database: 'manifest'
     }
 );
 
@@ -21,107 +30,77 @@ db.connect((err) => {
     console.log('MySQL Database is Connected');
 });
 
-//Setup Express Server
-const app = express();
 
 
-// Create Database
-app.get('/createdb', (req, res) => {
-    let sql = 'CREATE DATABASE nbajerseys';
-     //execute sql query
-     db.query(sql, (err, result) => {
-        if(err) {
-            throw err;
+// POST
+app.post('/post', (req, res) => {
+    let sql = "INSERT INTO manifest SET ?";
+    let post = {
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          seatNum: req.body.seatNum,
+          checkIn: req.body.checkIn
+    };
+    db.query(sql, post, (err, result) => {
+        if(err){
+            throw (err);
         }
-        
-        console.log("Database nbajerseys Created Successfully!");
-    }); 
-});
-
-//Create a New Table
-app.get('/createtable', (req, res) => {
-    let sql = "CREATE TABLE postings (id INT AUTO_INCREMENT, title VARCHAR(50), message VARCHAR(50), PRIMARY KEY(id)) ";
-    //execute sql query
+        console.log(result);
+        return res.send(result)
+    });
+  });
+  
+  // GET
+  app.get("/get", (req, res) => {
+    let sqlSelect = "SELECT * FROM manifest;";
+    db.query(sqlSelect, (err, result) => {
+        if(err){
+            throw (err);
+        }
+        console.log(result);
+        return res.send(result);
+    });
+  });
+  
+  // PUT
+  app.put("/edit/:id", (req, res) => {
+    let updateFirstName = req.body.firstName;
+    let updateLastName = req.body.lastName;
+    let updateSeatNum = req.body.seatNum;
+    let updateCheckIn = req.body.checkIn;
+    let sql = `UPDATE manifest SET 
+    firstName = '${updateFirstName}',
+    lastName = '${updateLastName}',
+    seatNum = '${updateSeatNum}',
+    checkIn = '${updateCheckIn}'
+        WHERE id = '${req.params.id}'`
     db.query(sql, (err, result) => {
-        if(err) {
-            throw err;
+        if(err){
+            throw (err);
         }
         console.log(result);
-        console.log("Postings Table Created Susccessfully!");
-   });
-
-});
-// Insert New Record 1
-app.post('/instertrow1', (req, res) => {
-    let post = {title:'MichealJ', message:'ChicagoBulls'};
-    let sql =  "INSERT INTO posting SET ?";
-    db.query(sql, post, (err, result) => {
-        if (err) {
-            throw err;
-        }
-        console.log(result);
-        console.log("Row1 Inserted!!");
+        return res.send(result);
     });
-});
-// Insert New Record 2
-app.post('/instertrow2', (req, res) => {
-    let post = {title:'Lebron James', message:'LA Lakers'};
-    let sql =  "INSERT INTO posting SET ?";
-    db.query(sql, post, (err, result) => {
-        if (err) {
-            throw err;
+  });
+  
+  // DELETE
+  app.delete("/delete/:id", (req, res) => {
+    let sql = `DELETE FROM manifest WHERE id = '${req.params.id}'`
+    db.query(sql, (err, result) => {
+        if(err){
+            throw (err);
         }
         console.log(result);
-        console.log("Row2 Inserted!!");
+        return res.send("Information from Manifest has been successfully removed")
     });
-
-});
-
-// Select Rows
-app.get('/getposts/:id', (req, res) => {
-    let sql = `SELECT * FROM postings WHERE id = ${reg.params.id}`;
-     //execute sql query
-     db.query(sql, (err, result) => {
-        if(err) {
-            throw err;
-        }
-        console.log(result);
-       console.log("Record Retreived Created Successfully!");
-    }); 
-});
-
-// UDATE COMMAND
-app.get('/updateposts/:id', (req, res) => {
-    let newTitle = "This is updated title via hardcoaded value";
-    let sql = `UPDATE postings SET title = ${newTitle} WHERE id = ${req.params.id}`;
-     //execute sql query
-     db.query(sql, (err, result) => {
-        if(err) {
-            throw err;
-        }
-        console.log(sql);
-        console.log(result);
-       console.log("UPDATE Query Executed Successfully!");
-    }); 
-});
-
-// DELETE Command
-// Execute a DELETE Command
-app.get('/deleteposts/id', (req, res) => {
-    let sql = `DELETE FROM postings WHERE id = ${req.params.id}`;
-     //execute sql query
-     db.query(sql, (err, result) => {
-        if(err) {
-            throw err;
-        }
-        
-        console.log(result);
-       console.log("DELETE Command Executed Successfully!");
-    }); 
-});
-//Open the default port and listen for the connection
-app.listen(PORT, () => {
-    console.log(`Server running on port: ${PORT}`)
-});
-
-
+  });
+  
+  // Error Handling
+  app.use((err, req, res, next) => {
+      return res.send({errMsg: err.message});
+  });
+  
+  // Listen
+  app.listen(PORT, () => {
+      console.log(`Server running on port: ${PORT}`)
+  })
